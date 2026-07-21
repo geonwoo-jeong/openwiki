@@ -6,7 +6,7 @@ settings:
 
 patchedDependencies:
   '@langchain/aws@1.4.2':
-    hash: 68dd1053b16e203100c85d5fc30667ad3ac809f5105245f68713f2bbfebc2e97
+    hash: 31b29db978f1e5a4d76afeb7bfc22c73564b7a101e3e895c6359ecbf20b943ad
     path: patches/@langchain__aws@1.4.2.patch
 
 importers:
@@ -24,7 +24,7 @@ importers:
         version: 1.5.1(@langchain/core@1.2.1(openai@6.45.0(@aws-sdk/credential-provider-node@3.972.63)(@smithy/signature-v4@5.6.2)(ws@8.21.0)(zod@4.4.3))(ws@8.21.0))
       '@langchain/aws':
         specifier: ^1.4.2
-        version: 1.4.2(patch_hash=68dd1053b16e203100c85d5fc30667ad3ac809f5105245f68713f2bbfebc2e97)(@langchain/core@1.2.1(openai@6.45.0(@aws-sdk/credential-provider-node@3.972.63)(@smithy/signature-v4@5.6.2)(ws@8.21.0)(zod@4.4.3))(ws@8.21.0))
+        version: 1.4.2(patch_hash=31b29db978f1e5a4d76afeb7bfc22c73564b7a101e3e895c6359ecbf20b943ad)(@langchain/core@1.2.1(openai@6.45.0(@aws-sdk/credential-provider-node@3.972.63)(@smithy/signature-v4@5.6.2)(ws@8.21.0)(zod@4.4.3))(ws@8.21.0))
       '@langchain/core':
         specifier: ^1.2.1
         version: 1.2.1(openai@6.45.0(@aws-sdk/credential-provider-node@3.972.63)(@smithy/signature-v4@5.6.2)(ws@8.21.0)(zod@4.4.3))(ws@8.21.0)
@@ -2999,7 +2999,7 @@ snapshots:
       '@langchain/core': 1.2.1(openai@6.45.0(@aws-sdk/credential-provider-node@3.972.63)(@smithy/signature-v4@5.6.2)(ws@8.21.0)(zod@4.4.3))(ws@8.21.0)
       zod: 4.4.3
 
-  '@langchain/aws@1.4.2(patch_hash=68dd1053b16e203100c85d5fc30667ad3ac809f5105245f68713f2bbfebc2e97)(@langchain/core@1.2.1(openai@6.45.0(@aws-sdk/credential-provider-node@3.972.63)(@smithy/signature-v4@5.6.2)(ws@8.21.0)(zod@4.4.3))(ws@8.21.0))':
+  '@langchain/aws@1.4.2(patch_hash=31b29db978f1e5a4d76afeb7bfc22c73564b7a101e3e895c6359ecbf20b943ad)(@langchain/core@1.2.1(openai@6.45.0(@aws-sdk/credential-provider-node@3.972.63)(@smithy/signature-v4@5.6.2)(ws@8.21.0)(zod@4.4.3))(ws@8.21.0))':
     dependencies:
       '@aws-sdk/client-bedrock-agent-runtime': 3.1080.0
       '@aws-sdk/client-bedrock-runtime': 3.1080.0
