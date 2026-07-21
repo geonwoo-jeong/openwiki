@@ -2,7 +2,7 @@ diff --git a/dist/utils/message_inputs.cjs b/dist/utils/message_inputs.cjs
 index 7ab8836639afab2e31974c18fee04910e88ea195..d9fa5d9ea01a59f13fd63f39d347011de8523ad4 100644
 --- a/dist/utils/message_inputs.cjs
 +++ b/dist/utils/message_inputs.cjs
-@@ -257,6 +257,17 @@ function convertAIMessageToConverseMessage(msg) {
+@@ -257,6 +257,20 @@ function convertAIMessageToConverseMessage(msg) {
  			} else contentBlocks.push({ text: block.text });
  			else if (block.type === "reasoning_content") contentBlocks.push({ reasoningContent: langchainReasoningBlockToBedrockReasoningBlock(block) });
  			else if (isDefaultCachePoint(block)) contentBlocks.push(convertCachePointBlock(block));
@@ -17,6 +17,9 @@ index 7ab8836639afab2e31974c18fee04910e88ea195..d9fa5d9ea01a59f13fd63f39d347011d
 +					input: block.args
 +				} });
 +			}
++			else if (block.type === "invalid_tool_call") {
++				// Invalid tool calls cannot be replayed and are skipped by v1 conversion.
++			}
  			else {
  				const blockValues = Object.fromEntries(Object.entries(block).filter(([key]) => key !== "type"));
  				throw new Error(`Unsupported content block type: ${block.type} with content of ${JSON.stringify(blockValues, null, 2)}`);
@@ -24,7 +27,7 @@ diff --git a/dist/utils/message_inputs.js b/dist/utils/message_inputs.js
 index c82de0c4d3e8cfd43d1dd3e798a8117cb21a3faf..a0e1316710d52f1c52c98c5a1f15c5fccd37ea91 100644
 --- a/dist/utils/message_inputs.js
 +++ b/dist/utils/message_inputs.js
-@@ -257,6 +257,17 @@ function convertAIMessageToConverseMessage(msg) {
+@@ -257,6 +257,20 @@ function convertAIMessageToConverseMessage(msg) {
  			} else contentBlocks.push({ text: block.text });
  			else if (block.type === "reasoning_content") contentBlocks.push({ reasoningContent: langchainReasoningBlockToBedrockReasoningBlock(block) });
  			else if (isDefaultCachePoint(block)) contentBlocks.push(convertCachePointBlock(block));
@@ -38,6 +41,9 @@ index c82de0c4d3e8cfd43d1dd3e798a8117cb21a3faf..a0e1316710d52f1c52c98c5a1f15c5fc
 +					name: block.name,
 +					input: block.args
 +				} });
++			}
++			else if (block.type === "invalid_tool_call") {
++				// Invalid tool calls cannot be replayed and are skipped by v1 conversion.
 +			}
  			else {
  				const blockValues = Object.fromEntries(Object.entries(block).filter(([key]) => key !== "type"));
