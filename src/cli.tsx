@@ -4137,6 +4137,8 @@ async function runPrintCommand(
     const handlePrintEvent = (event: OpenWikiRunEvent): void => {
       if (event.type === "text" && event.source !== "subgraph") {
         output.push(event.text);
+      } else if (event.type === "debug" && isDebugMode()) {
+        process.stderr.write(`[debug] ${event.message}\n`);
       }
     };
 

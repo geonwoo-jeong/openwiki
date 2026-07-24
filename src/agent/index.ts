@@ -305,6 +305,7 @@ async function runOpenWikiAgentCore(
 
   try {
     for await (const chunk of stream) {
+      emitModelStreamDiagnostic(options, chunk);
       const event = parseStreamEvent(chunk);
 
       if (event) {
@@ -902,6 +903,60 @@ function createGeminiEnterpriseModel(
         googleAuthOptions: { projectId },
         ...retryOptions,
       });
+  }
+}
+
+/** @internal Exported for focused protocol-event regression tests. */
+export function emitModelStreamDiagnostic(
+  options: OpenWikiRunOptions,
+  chunk: unknown,
+): void {
+  if (
+    !options.debug ||
+    !isProtocolStreamEvent(chunk) ||
+    chunk.method !== "messages" ||
+    !isRecord(chunk.params.data)
+  ) {
+    return;
+  }
+
+  const payload = chunk.params.data;
+  const event = getStringRecordValue(payload, "event");
+  const runId = getStringRecordValue(payload, "run_id") ?? "unknown";
+
+  if (event === "content-block-finish" && isRecord(payload.content)) {
+    const content = payload.content;
+
+    if (getStringRecordValue(content, "type") !== "invalid_tool_call") {
+      return;
+    }
+
+    const args = content.args;
+    const argsChars = typeof args === "string" ? args.length : 0;
+    const name = getStringRecordValue(content, "name") ?? "unknown";
+
+    emitDebug(
+      options,
+      `model.invalidToolCall=true runId=${JSON.stringify(
+        runId,
+      )} name=${JSON.stringify(name)} argsChars=${argsChars}`,
+    );
+    return;
+  }
+
+  if (event === "message-finish") {
+    const finishReason = getStringRecordValue(payload, "reason");
+
+    if (!finishReason) {
+      return;
+    }
+
+    emitDebug(
+      options,
+      `model.messageFinish=true runId=${JSON.stringify(
+        runId,
+      )} finishReason=${JSON.stringify(finishReason)}`,
+    );
   }
 }
 
