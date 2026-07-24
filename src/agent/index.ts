@@ -302,10 +302,15 @@ async function runOpenWikiAgentCore(
   emitDebug(options, "stream=started protocol=events version=v3");
 
   let unhandledChunkCount = 0;
+  let invalidToolCallRunIds: ReadonlySet<string> = new Set();
 
   try {
     for await (const chunk of stream) {
       emitModelStreamDiagnostic(options, chunk);
+      invalidToolCallRunIds = guardModelStreamEvent(
+        invalidToolCallRunIds,
+        chunk,
+      );
       const event = parseStreamEvent(chunk);
 
       if (event) {
@@ -907,6 +912,56 @@ function createGeminiEnterpriseModel(
 }
 
 /** @internal Exported for focused protocol-event regression tests. */
+export function guardModelStreamEvent(
+  invalidToolCallRunIds: ReadonlySet<string>,
+  chunk: unknown,
+): ReadonlySet<string> {
+  if (
+    !isProtocolStreamEvent(chunk) ||
+    chunk.method !== "messages" ||
+    !isRecord(chunk.params.data)
+  ) {
+    return invalidToolCallRunIds;
+  }
+
+  const payload = chunk.params.data;
+  const event = getStringRecordValue(payload, "event");
+  const runId = getStringRecordValue(payload, "run_id");
+
+  if (!runId) {
+    return invalidToolCallRunIds;
+  }
+
+  if (
+    event === "content-block-finish" &&
+    isRecord(payload.content) &&
+    getStringRecordValue(payload.content, "type") === "invalid_tool_call"
+  ) {
+    return new Set([...invalidToolCallRunIds, runId]);
+  }
+
+  if (event !== "message-finish") {
+    return invalidToolCallRunIds;
+  }
+
+  if (!invalidToolCallRunIds.has(runId)) {
+    return invalidToolCallRunIds;
+  }
+
+  if (getStringRecordValue(payload, "reason") === "length") {
+    throw new Error(
+      "Model output reached its token limit before completing a tool call. Retry with smaller tool payloads; use --debug to inspect finishReason and outputTokens.",
+    );
+  }
+
+  return new Set(
+    [...invalidToolCallRunIds].filter(
+      (invalidToolCallRunId) => invalidToolCallRunId !== runId,
+    ),
+  );
+}
+
+/** @internal Exported for focused protocol-event regression tests. */
 export function emitModelStreamDiagnostic(
   options: OpenWikiRunOptions,
   chunk: unknown,
@@ -951,11 +1006,18 @@ export function emitModelStreamDiagnostic(
       return;
     }
 
+    const usage = isRecord(payload.usage) ? payload.usage : null;
+    const outputTokens = usage
+      ? getNumberRecordValue(usage, "output_tokens")
+      : null;
+
     emitDebug(
       options,
       `model.messageFinish=true runId=${JSON.stringify(
         runId,
-      )} finishReason=${JSON.stringify(finishReason)}`,
+      )} finishReason=${JSON.stringify(finishReason)}${
+        outputTokens === null ? "" : ` outputTokens=${outputTokens}`
+      }`,
     );
   }
 }
@@ -1410,6 +1472,16 @@ function getStringRecordValue(
   key: string,
 ): string | null {
   return typeof value[key] === "string" ? value[key] : null;
+}
+
+function getNumberRecordValue(
+  value: Record<string, unknown>,
+  key: string,
+): number | null {
+  const candidate = value[key];
+  return typeof candidate === "number" && Number.isFinite(candidate)
+    ? candidate
+    : null;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

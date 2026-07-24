@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { emitModelStreamDiagnostic } from "../src/agent/index.ts";
+import {
+  emitModelStreamDiagnostic,
+  guardModelStreamEvent,
+} from "../src/agent/index.ts";
 import type { OpenWikiRunEvent } from "../src/agent/types.ts";
 
 function messageEvent(data: Record<string, unknown>): unknown {
@@ -57,11 +60,13 @@ describe("emitModelStreamDiagnostic", () => {
         event: "message-finish",
         reason: "length",
         run_id: "run-1",
+        usage: { output_tokens: 128_000 },
       }),
     );
 
     expect(onEvent).toHaveBeenCalledWith({
-      message: 'model.messageFinish=true runId="run-1" finishReason="length"',
+      message:
+        'model.messageFinish=true runId="run-1" finishReason="length" outputTokens=128000',
       type: "debug",
     });
   });
@@ -97,6 +102,67 @@ describe("emitModelStreamDiagnostic", () => {
     );
 
     expect(onEvent).not.toHaveBeenCalled();
+  });
+});
+
+describe("guardModelStreamEvent", () => {
+  test.each(["write_file", "edit_file"])(
+    "fails when a model run reaches its token limit with an invalid %s call",
+    (toolName) => {
+      const state = guardModelStreamEvent(
+        new Set(),
+        messageEvent({
+          content: { name: toolName, type: "invalid_tool_call" },
+          event: "content-block-finish",
+          run_id: "run-1",
+        }),
+      );
+
+      expect(() =>
+        guardModelStreamEvent(
+          state,
+          messageEvent({
+            event: "message-finish",
+            reason: "length",
+            run_id: "run-1",
+          }),
+        ),
+      ).toThrow(
+        "Model output reached its token limit before completing a tool call.",
+      );
+    },
+  );
+
+  test("does not fail for another run or a non-length finish reason", () => {
+    const state = guardModelStreamEvent(
+      new Set(),
+      messageEvent({
+        content: { name: "write_file", type: "invalid_tool_call" },
+        event: "content-block-finish",
+        run_id: "run-1",
+      }),
+    );
+
+    expect(() =>
+      guardModelStreamEvent(
+        state,
+        messageEvent({
+          event: "message-finish",
+          reason: "length",
+          run_id: "run-2",
+        }),
+      ),
+    ).not.toThrow();
+    const clearedState = guardModelStreamEvent(
+      state,
+      messageEvent({
+        event: "message-finish",
+        reason: "stop",
+        run_id: "run-1",
+      }),
+    );
+
+    expect(clearedState.has("run-1")).toBe(false);
   });
 });
 
