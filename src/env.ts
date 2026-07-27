@@ -56,8 +56,10 @@ import {
   OPENWIKI_MODEL_ID_ENV_KEY,
   OPENWIKI_PROVIDER_ENV_KEY,
   OPENWIKI_PROVIDER_RETRY_ATTEMPTS_ENV_KEY,
+  OPENWIKI_STREAM_IDLE_TIMEOUT_ENV_KEY,
   resolveMaxOutputTokens,
   resolveProviderRetryAttempts,
+  resolveStreamIdleTimeout,
 } from "./constants.js";
 import { isFileNotFoundError } from "./fs-errors.js";
 import { restrictDirToCurrentUser } from "./windows-acl.js";
@@ -119,6 +121,7 @@ export const MANAGED_ENV_KEYS = [
   OPENWIKI_PROVIDER_ENV_KEY,
   OPENWIKI_MODEL_ID_ENV_KEY,
   OPENWIKI_MAX_OUTPUT_TOKENS_ENV_KEY,
+  OPENWIKI_STREAM_IDLE_TIMEOUT_ENV_KEY,
   OPENWIKI_PROVIDER_RETRY_ATTEMPTS_ENV_KEY,
   OPENWIKI_NOTION_TOKEN_ENV_KEY,
   OPENWIKI_NOTION_MCP_CLIENT_ID_ENV_KEY,
@@ -365,10 +368,12 @@ function createCredentialDiagnostic(
           ? getProviderWarnings(value)
           : key === OPENWIKI_MAX_OUTPUT_TOKENS_ENV_KEY
             ? getMaxOutputTokensWarnings(value)
-            : key === OPENWIKI_PROVIDER_RETRY_ATTEMPTS_ENV_KEY
-              ? getRetryAttemptsWarnings(value)
-              : (getBaseUrlDiagnosticWarnings(key, value) ??
-                getCredentialWarnings(value)),
+            : key === OPENWIKI_STREAM_IDLE_TIMEOUT_ENV_KEY
+              ? getStreamIdleTimeoutWarnings(value)
+              : key === OPENWIKI_PROVIDER_RETRY_ATTEMPTS_ENV_KEY
+                ? getRetryAttemptsWarnings(value)
+                : (getBaseUrlDiagnosticWarnings(key, value) ??
+                  getCredentialWarnings(value)),
   };
 }
 
@@ -427,6 +432,7 @@ function isNonSecretDiagnosticKey(key: string): boolean {
     key === OPENWIKI_MODEL_ID_ENV_KEY ||
     key === OPENWIKI_PROVIDER_ENV_KEY ||
     key === OPENWIKI_MAX_OUTPUT_TOKENS_ENV_KEY ||
+    key === OPENWIKI_STREAM_IDLE_TIMEOUT_ENV_KEY ||
     key === OPENWIKI_PROVIDER_RETRY_ATTEMPTS_ENV_KEY ||
     key === OPENWIKI_OPENROUTER_PROVIDER_ONLY_ENV_KEY ||
     key === ANTHROPIC_BASE_URL_ENV_KEY ||
@@ -501,6 +507,18 @@ function getMaxOutputTokensWarnings(value: string): string[] {
     return [];
   } catch {
     return ["invalid output token limit"];
+  }
+}
+
+function getStreamIdleTimeoutWarnings(value: string): string[] {
+  try {
+    resolveStreamIdleTimeout({
+      [OPENWIKI_STREAM_IDLE_TIMEOUT_ENV_KEY]: value,
+    });
+
+    return [];
+  } catch {
+    return ["invalid stream idle timeout"];
   }
 }
 

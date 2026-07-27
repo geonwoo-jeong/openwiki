@@ -35,6 +35,7 @@ import {
   resolveProviderLocation,
   resolveProviderRegion,
   resolveProviderRetryAttempts,
+  resolveStreamIdleTimeout,
 } from "../src/constants.ts";
 
 describe("isValidModelId", () => {
@@ -302,6 +303,49 @@ describe("resolveMaxOutputTokens", () => {
           OPENWIKI_MAX_OUTPUT_TOKENS: value,
         }),
       ).toThrow(/OPENWIKI_MAX_OUTPUT_TOKENS/u);
+    }
+  });
+});
+
+describe("resolveStreamIdleTimeout", () => {
+  test("uses the provider default when no override is set", () => {
+    expect(resolveStreamIdleTimeout({})).toBeUndefined();
+  });
+
+  test("accepts zero to disable the watchdog and positive millisecond values", () => {
+    expect(
+      resolveStreamIdleTimeout({
+        OPENWIKI_STREAM_IDLE_TIMEOUT: " 0 ",
+      }),
+    ).toBe(0);
+    expect(
+      resolveStreamIdleTimeout({
+        OPENWIKI_STREAM_IDLE_TIMEOUT: "300000",
+      }),
+    ).toBe(300000);
+    expect(
+      resolveStreamIdleTimeout({
+        OPENWIKI_STREAM_IDLE_TIMEOUT: "2147483647",
+      }),
+    ).toBe(2147483647);
+  });
+
+  test("rejects invalid stream idle timeouts", () => {
+    for (const value of [
+      "",
+      "   ",
+      "-1",
+      "1.5",
+      "abc",
+      "1e2",
+      "2147483648",
+      "9007199254740992",
+    ]) {
+      expect(() =>
+        resolveStreamIdleTimeout({
+          OPENWIKI_STREAM_IDLE_TIMEOUT: value,
+        }),
+      ).toThrow(/OPENWIKI_STREAM_IDLE_TIMEOUT/u);
     }
   });
 });

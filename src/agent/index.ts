@@ -85,6 +85,7 @@ import {
   OPENWIKI_MODEL_ID_ENV_KEY,
   OPENWIKI_PROVIDER_ENV_KEY,
   OPENWIKI_PROVIDER_RETRY_ATTEMPTS_ENV_KEY,
+  OPENWIKI_STREAM_IDLE_TIMEOUT_ENV_KEY,
   providerRequiresBaseUrl,
   providerRequiresRegion,
   providerRequiresSecretKey,
@@ -96,6 +97,7 @@ import {
   resolveProviderLocation,
   resolveProviderRegion,
   resolveProviderRetryAttempts,
+  resolveStreamIdleTimeout,
   type OpenWikiProvider,
 } from "../constants.js";
 import {
@@ -199,6 +201,11 @@ export async function runOpenWikiAgent(
       options,
       `model.maxOutputTokens=${maxOutputTokens ?? "provider-default"}`,
     );
+    const streamIdleTimeout = resolveStreamIdleTimeout();
+    emitDebug(
+      options,
+      `model.streamIdleTimeout=${streamIdleTimeout ?? "provider-default"}`,
+    );
 
     const result = await runOpenWikiAgentCore(
       command,
@@ -208,6 +215,7 @@ export async function runOpenWikiAgent(
       modelId,
       providerRetryAttempts,
       maxOutputTokens,
+      streamIdleTimeout,
     );
 
     await recordRunSafe(command, options, {
@@ -239,6 +247,7 @@ async function runOpenWikiAgentCore(
   modelId: string,
   providerRetryAttempts: number,
   maxOutputTokens: number | undefined,
+  streamIdleTimeout: number | undefined,
 ): Promise<OpenWikiRunResult> {
   const outputMode = options.outputMode ?? "local-wiki";
   const context = await createRunContext(command, cwd, outputMode);
@@ -253,6 +262,7 @@ async function runOpenWikiAgentCore(
     modelId,
     providerRetryAttempts,
     maxOutputTokens,
+    streamIdleTimeout,
   );
   emitDebug(options, `model.provider=${provider}`);
   emitDebug(options, "model=initialized");
@@ -671,12 +681,15 @@ export function createModel(
   modelId: string,
   providerRetryAttempts: number,
   maxOutputTokens?: number,
+  streamIdleTimeout?: number,
 ) {
   const retryOptions = { maxRetries: providerRetryAttempts };
   const maxTokensOptions =
     maxOutputTokens === undefined ? {} : { maxTokens: maxOutputTokens };
   const googleMaxOutputTokensOptions =
     maxOutputTokens === undefined ? {} : { maxOutputTokens };
+  const streamIdleTimeoutOptions =
+    streamIdleTimeout === undefined ? {} : { streamIdleTimeout };
 
   if (provider === "gemini") {
     return new ChatGoogle({
@@ -780,6 +793,7 @@ export function createModel(
       model: modelId,
       region: resolveProviderRegion(provider),
       ...maxTokensOptions,
+      ...streamIdleTimeoutOptions,
       ...retryOptions,
     });
   }
@@ -1801,6 +1815,7 @@ export function formatEnvironmentDebugValue(
     key === OPENWIKI_MODEL_ID_ENV_KEY ||
     key === OPENWIKI_PROVIDER_ENV_KEY ||
     key === OPENWIKI_MAX_OUTPUT_TOKENS_ENV_KEY ||
+    key === OPENWIKI_STREAM_IDLE_TIMEOUT_ENV_KEY ||
     key === OPENWIKI_PROVIDER_RETRY_ATTEMPTS_ENV_KEY ||
     key === BEDROCK_AWS_REGION_ENV_KEY
   ) {
